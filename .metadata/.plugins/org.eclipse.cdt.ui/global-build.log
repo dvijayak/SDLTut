@@ -1,0 +1,3 @@
+23:12:39 **** Build of configuration Default for project 2 ****
+make all-run 
+./SDL_Lesson2

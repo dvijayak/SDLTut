@@ -1,0 +1,13 @@
+Preferences.MainPage.overwriteBuildFilesOnExport=prompt
+eclipse.preferences.version=1
+editor.color.default=255,255,255
+editor.color.externalized_string=58,217,0
+editor.color.header_assignment=216,216,216
+editor.color.header_attributes=158,255,255
+editor.color.header_key=255,238,128
+editor.color.header_osgi=255,238,128
+editor.color.header_value=58,217,0
+editor.color.instr=158,255,128
+editor.color.string=58,217,0
+editor.color.tag=158,255,255
+editor.color.xml_comment=0,136,255
