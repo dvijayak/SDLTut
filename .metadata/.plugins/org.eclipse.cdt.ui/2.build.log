@@ -1,6 +1,6 @@
-23:12:39 **** Build of configuration Default for project 2 ****
-make all-run 
-./SDL_Lesson2
+02:43:34 **** Incremental Build of configuration Default for project 2 ****
+make all 
+make: `all' is up to date.
 
-23:12:41 Build Finished (took 2s.371ms)
+02:43:34 Build Finished (took 75ms)
 

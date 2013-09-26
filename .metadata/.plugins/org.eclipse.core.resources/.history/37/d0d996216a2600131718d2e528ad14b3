@@ -1,0 +1,176 @@
+#include <iostream>
+#include <SDL2/SDL.h>
+
+using namespace std;
+
+
+/**
+ * Log an SDL error to the specified output stream.
+ * @param os The output stream to write the message to
+ * @param message The SDL error message
+ */
+void logSDLError (ostream &os, const string &message) {
+	os << message << " Error: " << SDL_GetError() << endl;
+}
+
+/**
+ * Load a bitmap image file into a texture on the rendering device.
+ * @param file The bitmap image file to load
+ * @param renderer The renderer to load the texture onto
+ * @return The loaded texture, or nullptr if something went wrong
+ */
+SDL_Texture* loadTexture (const string &file, SDL_Renderer *renderer) {
+	// Initialize to nullptr to avoid dangling pointer issues
+	SDL_Texture *texture = nullptr;
+
+	// Load a bitmap image from a file into memory...
+	SDL_Surface *bitmapImage = SDL_LoadBMP(file.c_str());
+	// ...and then upload it to the rendering platform we're using
+	if (bitmapImage != nullptr) {
+		texture = SDL_CreateTextureFromSurface(renderer, bitmapImage);
+		SDL_FreeSurface(bitmapImage); /* Once the texture has been created, the surface can be freed */
+		if (texture == nullptr) {
+			logSDLError(cout, "SDL_CreateTextureFromSurface");
+		}
+	}
+	else {
+		logSDLError(cout, "SDL_LoadBMP");
+	}
+
+	return texture;
+}
+
+/**
+ * Draw a texture to a renderer at position (x,y) while preserving.
+ * Note: textures are drawn first to last.
+ * the texture's width and height.
+ * @param texture The source texture we want to draw
+ * @param renderer The renderer we want to draw to
+ * @param x The x coordinate to draw at
+ * @param y The y coordinate to draw at
+ */
+void renderTexture (SDL_Texture *texture, SDL_Renderer *renderer, int x, int y) {
+	// Set up the destination rectangle to be at the poistion we want
+	SDL_Rect destination;
+	destination.x = x;
+	destination.y = y;
+
+	// Get the width and height of the texture (store into our destination rectangle)
+	SDL_QueryTexture(texture, NULL, NULL, &destination.w, &destination.h);
+	// Copy the texture to the rendering context
+	SDL_RenderCopy(renderer, texture, NULL, &destination);
+}
+
+/**
+ * Fill up the window with a texture in a tiled fashion.
+ * @param renderer The rendering context we want to draw to
+ * @param source The source texture we want to tile
+ * @param destination The destination texture on which we wish to tile the iamge
+ */
+void drawTiles (SDL_Renderer *renderer, SDL_Texture *source, SDL_Texture *destination) {
+	// Retrieve the width and height of the texture
+	int textureWidth, textureHeight;
+	SDL_QueryTexture(source, NULL, NULL, &textureWidth, &textureHeight);
+
+	// Compute the number of rows and columns for the tile matrix
+	int destinationWidth, destinationHeight;
+	SDL_QueryTexture(destination, NULL, NULL, &destinationWidth, &destinationHeight);
+	int rows = destinationWidth /textureWidth;
+	int cols = destinationHeight/textureHeight;
+
+	// Draw the texture as if we were filling up a matrix
+	int width = 0, height = 0;
+	for (int row = 0; row < rows; row++) {
+		for (int col = 0; col < cols; col++) {
+			// Draw the texture on to the rendering context
+			renderTexture(source, renderer, width, height);
+
+			// Shift the width
+			width += textureWidth;
+		}
+		// Shift the height
+		height += textureHeight;
+
+		// Reset the width; we are starting a new row
+		width = 0;
+	}
+
+}
+
+/**
+ * The main thread of execution
+ * @param argc Number of command-line arguments
+ * @param argv List of command-line arguments
+ */
+int main (int argc, char **argv) {
+	const int SCREEN_WIDTH = 640;
+	const int SCREEN_HEIGHT = 480;
+
+	// Initialize the various SDL subsystems we want to use
+	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) { /* Bare minimum is SDL_INIT_VIDEO */
+		logSDLError(cout, "SDL_Init");
+		return 1;
+	}	
+
+	// Open a window to display our renderings in
+	SDL_Window *window = SDL_CreateWindow("SDL Lesson 2"/*title*/, 100/*x*/, 100/*y*/,
+			SCREEN_WIDTH/*w*/, SCREEN_HEIGHT/*h*/, SDL_WINDOW_SHOWN);
+	if (window == nullptr/* New C++11 dedicated null pointer */) {
+		logSDLError(cout, "SDL_CreateWindow");
+		return 2;
+	}
+
+	// Create a renderer to draw to the window
+	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1/*index of rendering drive to be used*/,
+		SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+	if (renderer == nullptr) {
+		logSDLError(cout, "SDL_CreateRenderer");
+		return 3;
+	}
+
+	// Create a texture representing the window for use elsewhere
+	SDL_Texture *windowTexture = SDL_CreateTextureFromSurface(renderer, SDL_GetWindowSurface(window));
+
+	/********************/
+
+	// Load the background tile
+	SDL_Texture *background = loadTexture("./background.bmp", renderer);
+	// Load the foreground image
+	SDL_Texture *mainImage = loadTexture("./image.bmp", renderer);
+
+	if (background == nullptr || mainImage == nullptr) {
+		return 4;
+	}
+
+	// Draw the background image in a tiled fashion
+	SDL_RenderClear(renderer); /* Clear the renderer (Why?) */
+	drawTiles(renderer, background, windowTexture);
+	int bW, bH;
+//	SDL_QueryTexture(background, NULL, NULL, &bW, &bH);
+//	renderTexture(background, renderer, 0, 0);
+//	renderTexture(background, renderer, bW, 0);
+//	renderTexture(background, renderer, 0, bH);
+//	renderTexture(background, renderer, bW, bH);
+
+	// Draw the foreground image centered in the window
+	int iWidth, iHeight;
+	SDL_QueryTexture(mainImage, NULL, NULL, &iWidth, &iHeight);
+	// Offset the draw position in order to center the image
+	int x = SCREEN_WIDTH/2 - iWidth/2;
+	int y = SCREEN_HEIGHT/2 - iHeight/2;
+	renderTexture(mainImage, renderer, x, y);
+
+	// Present the updated screen to the user
+	SDL_RenderPresent(renderer);
+	SDL_Delay(5000); /* Keep the window open for 5 seconds; so we can actually view the results */
+
+	// Clean-up
+	SDL_DestroyTexture(background);
+	SDL_DestroyTexture(mainImage);
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(window);
+
+	SDL_Quit();
+
+	return 0;
+}
